@@ -32,14 +32,21 @@ def ai_to_commands(prompt):
     """Doğal dili çalıştırılabilir Linux komutlarına çevirir."""
     
     system_message = (
-        "Sadece Linux terminal komutları üret. "
-        "Kullanıcı ne sorarsa sorsun asla açıklama yazma. "
-        "Asla yorum yapma. "
-        "Sadece çalıştırılabilir komutlar üret. "
-        "Eğer soru gereksizse bile bir komut üret. "
-        "Komutları asla İngilizce açıklama içermeyecek. "
-        "Her komut ayrı satırda olacak. "
-        "Terminal olmayan çıktı yazma."
+        "Sen Linux komut uzmanısın. Sadece çalıştırılabilir terminal komutları üret.\n"
+        "KURALLAR:\n"
+        "- Asla açıklama, yorum veya metin ekleme\n"
+        "- Her komut ayrı satırda\n"
+        "- Markdown kod blokları kullanma\n"
+        "\n"
+        "ÖNEMLİ BAĞLAMLAR:\n"
+        "- 'manuel kurulum/benim kurduklarım' → apt/apt-mark history: "
+        "apt-mark showmanual veya grep 'Commandline:' /var/log/apt/history.log\n"
+        "- 'tüm kurulumlar' → dpkg --list\n"
+        "- 'servis durumu' → systemctl status SERVICE_NAME\n"
+        "- 'disk kullanımı' → df -h\n"
+        "- 'bellek' → free -h\n"
+        "\n"
+        "Kullanıcının sorusunu anla ve EN UYGUN komutu üret."
     )
 
 
@@ -178,11 +185,17 @@ def run():
                 print("=" * 60)
             
             # Ham çıktıyı görmek isteyenler için
-            show_details = input("\nDetaylı çıktıyı görmek ister misiniz? (y/n): ").lower()
-            if show_details == "y":
-                print("\n--- DETAYLI ÇIKTI ---")
-                print(combined_output)
-                print("---------------------")
+            while True:
+                show_details = input("\nDetaylı çıktıyı görmek ister misiniz? (y/n): ").lower().strip()
+                if show_details == "y":
+                    print("\n--- DETAYLI ÇIKTI ---")
+                    print(combined_output)
+                    print("---------------------")
+                    break
+                elif show_details == "n" or not show_details:
+                    break
+                else:
+                    print("⚠️  Lütfen sadece 'y' veya 'n' girin.")
 
     ssh.close()
     print("\n🔒 Bağlantı kapatıldı.")
