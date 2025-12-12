@@ -61,6 +61,42 @@ def ai_to_commands(prompt):
         return ""
 
 
+def ai_interpret_results(user_question, commands, outputs):
+    """Komut çıktılarını yorumlayarak kullanıcı dostu cevap üretir."""
+    
+    system_message = (
+        "Sen bir sunucu asistanısın. "
+        "Kullanıcının sorusuna göre komut çıktılarını yorumla ve "
+        "KISA, AÇIK ve ANLAŞILIR bir Türkçe cevap ver. "
+        "Teknik detaylara girmeden özet geç. "
+        "Cevabın maksimum 2-3 cümle olsun."
+    )
+    
+    prompt = f"""
+Kullanıcının Sorusu: {user_question}
+
+Çalıştırılan Komutlar:
+{commands}
+
+Komut Çıktıları:
+{outputs}
+
+Yukarıdaki bilgilere göre kullanıcının sorusunu KISA ve NET bir şekilde Türkçe cevapla.
+"""
+
+    model = genai.GenerativeModel(
+        model_name=MODEL,
+        system_instruction=system_message
+    )
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"\n❌ API Hatası: {e}")
+        return ""
+
+
 def run():
     print(f"=== AI-SH (Gemini: {MODEL}) — Yapay Zeka Destekli Sunucu Yönetimi ===\n")
 
@@ -104,6 +140,9 @@ def run():
 
         print("\n🚀 Komutlar uygulanıyor...\n")
         
+        # Tüm çıktıları topla
+        all_outputs = []
+        
         for cmd in commands.split("\n"):
             cmd = cmd.strip()
             if not cmd:
@@ -116,12 +155,34 @@ def run():
                 out = stdout.read().decode().strip()
                 err = stderr.read().decode().strip()
 
+                # Çıktıları biriktir
                 if out:
-                    print(f"[ÇIKTI]\n{out}")
+                    all_outputs.append(f"[{cmd}]\n{out}")
                 if err:
-                    print(f"[HATA]\n{err}")
+                    all_outputs.append(f"[{cmd} - HATA]\n{err}")
+                    
             except Exception as e:
+                error_msg = f"[{cmd} - İSTİSNA]\n{str(e)}"
+                all_outputs.append(error_msg)
                 print(f"Komut çalıştırma hatası: {e}")
+
+        # AI'dan sonuçları yorumlamasını iste
+        if all_outputs:
+            print("\n🤖 Sonuçlar yorumlanıyor...\n")
+            combined_output = "\n\n".join(all_outputs)
+            summary = ai_interpret_results(user_input, commands, combined_output)
+            
+            if summary:
+                print("=" * 60)
+                print(f"📊 ÖZET: {summary}")
+                print("=" * 60)
+            
+            # Ham çıktıyı görmek isteyenler için
+            show_details = input("\nDetaylı çıktıyı görmek ister misiniz? (y/n): ").lower()
+            if show_details == "y":
+                print("\n--- DETAYLI ÇIKTI ---")
+                print(combined_output)
+                print("---------------------")
 
     ssh.close()
     print("\n🔒 Bağlantı kapatıldı.")
